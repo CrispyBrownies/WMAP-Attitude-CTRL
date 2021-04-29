@@ -1,1 +1,1 @@
-# WMAPAttitudeCTRL
+# WMAP Attitude and Control
