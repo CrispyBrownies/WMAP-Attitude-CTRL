@@ -30,6 +30,7 @@ w = []
 q = []
 odeq = []
 odew = []
+l1Lst, l2Lst, l3Lst = [], [], []
 
 
 # Class for holding quaternion information
@@ -96,20 +97,30 @@ def quatProp(q, deltT, w):
     return np.matmul(omega, q)
 
 
-def rk4(q1, w1, h):
-    L = np.zeros((3, 1))
+def rk4(q1, w1, qt, wt, k, h):
+    rho = np.matrix([[qt.item(0)],
+                     [qt.item(1)],
+                     [qt.item(2)]])
+    top = qt.item(3) * np.identity(3) + crossMat(rho)
+    xi = np.concatenate((top, -rho.T), axis=0)
+
+    Lmat = np.matmul(-k * xi.T, q1) - k * (w1 - wt)
+
+    l1Lst.append(Lmat.item(0))
+    l2Lst.append(Lmat.item(1))
+    l3Lst.append(Lmat.item(2))
 
     k1 = h * getF(q1, w1)
-    l1 = h * getG(q1, w1, L)
+    l1 = h * getG(q1, w1, Lmat)
 
     k2 = h * getF(q1 + 0.5 * k1, w1 + 0.5 * l1)
-    l2 = h * getG(q1 + 0.5 * k1, w1 + 0.5 * l1, L)
+    l2 = h * getG(q1 + 0.5 * k1, w1 + 0.5 * l1, Lmat)
 
     k3 = h * getF(q1 + 0.5 * k2, w1 + 0.5 * l2)
-    l3 = h * getG(q1 + 0.5 * k2, w1 + 0.5 * l2, L)
+    l3 = h * getG(q1 + 0.5 * k2, w1 + 0.5 * l2, Lmat)
 
     k4 = h * getF(q1 + k3, w1 + l3)
-    l4 = h * getG(q1 + k3, w1 + l3, L)
+    l4 = h * getG(q1 + k3, w1 + l3, Lmat)
 
     q2 = q1 + (k1 + 2 * k2 + 2 * k3 + k4) / 6
     w2 = w1 + (l1 + 2 * l2 + 2 * l3 + l4) / 6
@@ -130,6 +141,24 @@ def getG(q1, w1, L):
     part2 = np.matmul(np.linalg.inv(J), L)
 
     return part1 + part2
+
+
+def multQuat(q1, q2):
+    neww = q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z
+    newx = q1.x * q2.w + q1.w * q2.x - q1.z * q2.y + q1.y * q2.z
+    newy = q1.y * q2.w + q1.z * q2.x + q1.w * q2.y - q1.x * q2.z
+    newz = q1.z * q2.w - q1.y * q2.x + q1.x * q2.y + q1.w * q2.z
+
+    return Q(newx, newy, newz, neww)
+
+
+def getQuatDiff(q1, q2):
+    q2conj = Q(-q2.x, -q2.y, -q2.z, q2.w)
+    return multQuat(q1, q2conj)
+
+
+def toQuat(array):
+    return Q(array.item(0), array.item(1), array.item(2), array.item(3))
 
 
 # Calculating desired scan pattern from t=1s to t=7200s
@@ -173,7 +202,7 @@ def q2():
     w2 = []
     w3 = []
 
-    for t in range(1, 6000):
+    for t in range(0, 6000):
         phi += phidot * 0.1
         thet += thetdot * 0.1
         psi += psidot * 0.1
@@ -252,19 +281,24 @@ def q3():
 
 
 def q4():
+    showControl = True
+
     q1Lst, q2Lst, q3Lst, q4Lst = [], [], [], []
+    w1Lst, w2Lst, w3Lst = [], [], []
 
-    # q1Lst = []
-    # q2Lst = []
-    # q3Lst = []
-    # q4Lst = []
-    w1Lst = []
-    w2Lst = []
-    w3Lst = []
     xlist = []
+    wdiff = []
+    q1diff, q2diff, q3diff = [], [], []
+    w1diff, w2diff, w3diff = [], [], []
+    k = 10
 
-    for i in range(0, 6001):
-        res = rk4(odeq[i], odew[i], 0.1)
+    if showControl:
+        odeq[0] = np.matrix([[0], [0], [0], [1]])
+        odew[0] = np.matrix([[0], [0], [0]])
+
+    for i in range(0, 6000):
+        res = rk4(odeq[i], odew[i], q[i], w[i], k, 0.1)
+
         odeq.append(res[0])
         odew.append(res[1])
 
@@ -279,6 +313,7 @@ def q4():
 
         xlist.append(i / 10)
 
+    # Plotting the RK4 quaternion trajectory
     plt.plot(xlist, q1Lst, label='$q_1$')
     plt.plot(xlist, q2Lst, label='$q_2$')
     plt.plot(xlist, q3Lst, label='$q_3$')
@@ -289,6 +324,51 @@ def q4():
     plt.title('Runge Kutta Quaternion Trajectory vs. Time')
     plt.show()
 
+    if showControl:
+        for i in range(0, 6000):
+            q1 = odeq[i]
+            q2 = q[i]
+            w1 = odew[i]
+            w2 = w[i]
+
+            diffQ = getQuatDiff(toQuat(q1), toQuat(q2))
+            q1diff.append(0.5 * diffQ.x * 180 / math.pi)
+            q2diff.append(0.5 * diffQ.y * 180 / math.pi)
+            q3diff.append(0.5 * diffQ.z * 180 / math.pi)
+
+            w1diff.append(w2.item(0) - w1.item(0))
+            w2diff.append(w2.item(1) - w1.item(1))
+            w3diff.append(w2.item(2) - w1.item(2))
+
+        # Plotting quaternion error
+        plt.plot(xlist, q1diff, label='$q_1$')
+        plt.plot(xlist, q2diff, label='$q_2$')
+        plt.plot(xlist, q3diff, label='$q_3$')
+        plt.legend()
+        plt.xlabel('Time t [s]')
+        plt.ylabel(r'Quaternion Error $\delta\alpha$ [deg]')
+        plt.title('Quaternion Error vs. Time')
+        plt.show()
+
+        # Plotting angular velocity error
+        plt.plot(xlist, w1diff, label='$w_1$')
+        plt.plot(xlist, w2diff, label='$w_2$')
+        plt.plot(xlist, w3diff, label='$w_3$')
+        plt.legend()
+        plt.xlabel('Time t [s]')
+        plt.ylabel(r'Angular Velocity Error w(t)-$\tilde{w}$(t) [rad]')
+        plt.title('Angular Velocity Error vs. Time')
+        plt.show()
+
+        # Plotting L matrix
+        plt.plot(xlist, l1Lst, label='$L_1$')
+        plt.plot(xlist, l2Lst, label='$L_2$')
+        plt.plot(xlist, l3Lst, label='$L_3$')
+        plt.legend()
+        plt.xlabel('Time t [s]')
+        plt.ylabel(r'Control Law L(t) [rad]')
+        plt.title('Control Law vs. Time')
+        plt.show()
 
 q1()
 q2()
