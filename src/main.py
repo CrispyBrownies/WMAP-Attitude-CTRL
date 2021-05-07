@@ -32,6 +32,9 @@ odeq = []
 odew = []
 l1Lst, l2Lst, l3Lst = [], [], []
 
+plots = []
+
+compFig = 3
 
 # Class for holding quaternion information
 class Q:
@@ -184,11 +187,12 @@ def q1():
         xlist.append(e1 / (1 + e3))
         ylist.append(e2 / (1 + e3))
 
+    plt.figure(1)
     plt.plot(xlist, ylist, linewidth=1.0)
     plt.title('Desired Scan Pattern X/Y')
     plt.xlabel('x')
     plt.ylabel('y')
-    plt.show()
+    # plt.show()
 
 
 def q2():
@@ -223,6 +227,7 @@ def q2():
     odew.append(w[0])
     print(w[0])
 
+    plt.figure(2)
     plt.plot(xlist, w1, label='$\omega_1$(t)')
     plt.plot(xlist, w2, label='$\omega_2$(t)')
     plt.plot(xlist, w3, label='$\omega_3$(t)')
@@ -230,7 +235,7 @@ def q2():
     plt.xlabel('Time t [s]')
     plt.ylabel('Angular Velocity $\omega$(t) [rad/s]')
     plt.legend()
-    plt.show()
+    # plt.show()
 
 
 def q3():
@@ -267,8 +272,8 @@ def q3():
         xlist.append(i / 10)
         oldq = newQ
 
-    # print(q1Lst)
-
+    # Plotting quaternion trajectory
+    plt.figure(3)
     plt.plot(xlist, q1Lst, label='$q_1$')
     plt.plot(xlist, q2Lst, label='$q_2$')
     plt.plot(xlist, q3Lst, label='$q_3$')
@@ -277,20 +282,19 @@ def q3():
     plt.xlabel('Time t [s]')
     plt.ylabel('Quaternion')
     plt.title('Quaternion Trajectory vs. Time')
-    plt.show()
+    # plt.show()
 
 
-def q4():
+def q4(k):
     showControl = True
+    global compFig
 
     q1Lst, q2Lst, q3Lst, q4Lst = [], [], [], []
     w1Lst, w2Lst, w3Lst = [], [], []
 
     xlist = []
-    wdiff = []
     q1diff, q2diff, q3diff = [], [], []
     w1diff, w2diff, w3diff = [], [], []
-    k = 10
 
     if showControl:
         odeq[0] = np.matrix([[0], [0], [0], [1]])
@@ -314,6 +318,8 @@ def q4():
         xlist.append(i / 10)
 
     # Plotting the RK4 quaternion trajectory
+    compFig += 1
+    plt.figure(compFig)
     plt.plot(xlist, q1Lst, label='$q_1$')
     plt.plot(xlist, q2Lst, label='$q_2$')
     plt.plot(xlist, q3Lst, label='$q_3$')
@@ -321,8 +327,8 @@ def q4():
     plt.legend()
     plt.xlabel('Time t [s]')
     plt.ylabel('Quaternion')
-    plt.title('Runge Kutta Quaternion Trajectory vs. Time')
-    plt.show()
+    plt.title('Runge Kutta Quaternion k = '+str(k)+' Trajectory vs. Time')
+    # plt.show()
 
     if showControl:
         for i in range(0, 6000):
@@ -341,36 +347,53 @@ def q4():
             w3diff.append(w2.item(2) - w1.item(2))
 
         # Plotting quaternion error
+        compFig += 1
+        plt.figure(compFig)
         plt.plot(xlist, q1diff, label='$q_1$')
         plt.plot(xlist, q2diff, label='$q_2$')
         plt.plot(xlist, q3diff, label='$q_3$')
         plt.legend()
         plt.xlabel('Time t [s]')
         plt.ylabel(r'Quaternion Error $\delta\alpha$ [deg]')
-        plt.title('Quaternion Error vs. Time')
-        plt.show()
+        plt.title('Quaternion Error k = '+str(k)+' vs. Time')
+        # plt.show()
 
         # Plotting angular velocity error
+        compFig += 1
+        plt.figure(compFig)
         plt.plot(xlist, w1diff, label='$w_1$')
         plt.plot(xlist, w2diff, label='$w_2$')
         plt.plot(xlist, w3diff, label='$w_3$')
         plt.legend()
         plt.xlabel('Time t [s]')
         plt.ylabel(r'Angular Velocity Error w(t)-$\tilde{w}$(t) [rad]')
-        plt.title('Angular Velocity Error vs. Time')
-        plt.show()
+        plt.title('Angular Velocity k = '+str(k)+' Error vs. Time')
+        # plt.show()
 
         # Plotting L matrix
+        compFig += 1
+        plt.figure(compFig)
         plt.plot(xlist, l1Lst, label='$L_1$')
         plt.plot(xlist, l2Lst, label='$L_2$')
         plt.plot(xlist, l3Lst, label='$L_3$')
         plt.legend()
         plt.xlabel('Time t [s]')
         plt.ylabel(r'Control Law L(t) [rad]')
-        plt.title('Control Law vs. Time')
-        plt.show()
+        plt.title('Control Law k = '+str(k)+' vs. Time')
+        # plt.show()
+
+
+def ec():
+    krange = [1, 5, 10, 15, 20]
+    for k in krange:
+        global l1Lst, l2Lst, l3Lst
+        l1Lst, l2Lst, l3Lst = [], [], []
+        q4(k)
+
 
 q1()
 q2()
 q3()
-q4()
+q4(10)
+ec()
+plt.show()
