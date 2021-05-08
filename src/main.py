@@ -6,10 +6,8 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 
-# from matplotlib import rc
-#
-# rc('text', usetex = True)
-
+# Change path to save image elsewhere
+path = "../Figures/"
 
 # Euler Angles and Euler Rates (3-1-3)
 phi0 = 0  # [rad]
@@ -32,9 +30,8 @@ odeq = []
 odew = []
 l1Lst, l2Lst, l3Lst = [], [], []
 
-plots = []
-
 compFig = 3
+
 
 # Class for holding quaternion information
 class Q:
@@ -85,6 +82,7 @@ def crossMat(alpha):
                       [-alpha.item(1), alpha.item(0), 0]])
 
 
+# Propagates the quaternion equations forward in time using q(t+deltT) = omega[w(t)]*q(t)
 def quatProp(q, deltT, w):
     xi = 1 / (np.linalg.norm(w)) * (math.sin(0.5 * np.linalg.norm(w) * deltT) * w)
     cosVal = math.cos(0.5 * np.linalg.norm(w) * deltT)
@@ -100,6 +98,7 @@ def quatProp(q, deltT, w):
     return np.matmul(omega, q)
 
 
+# Numerically integrate next q and w value using 4th order Runge Kutta Routine
 def rk4(q1, w1, qt, wt, k, h):
     rho = np.matrix([[qt.item(0)],
                      [qt.item(1)],
@@ -131,6 +130,7 @@ def rk4(q1, w1, qt, wt, k, h):
     return [q2, w2]
 
 
+# Calculates the "f" part of Runge Kutta
 def getF(q1, w1):
     rho = np.matrix([[q1.item(0)],
                      [q1.item(1)],
@@ -139,6 +139,7 @@ def getF(q1, w1):
     return 0.5 * np.matmul(np.concatenate((top, -rho.T), axis=0), w1)
 
 
+# Calculates the "g" part of Runge Kutta
 def getG(q1, w1, L):
     part1 = np.matmul(np.matmul(np.matmul(-np.linalg.inv(J), crossMat(w1)), J), w1)
     part2 = np.matmul(np.linalg.inv(J), L)
@@ -146,6 +147,7 @@ def getG(q1, w1, L):
     return part1 + part2
 
 
+# Function to multiple two quaternions
 def multQuat(q1, q2):
     neww = q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z
     newx = q1.x * q2.w + q1.w * q2.x - q1.z * q2.y + q1.y * q2.z
@@ -155,17 +157,21 @@ def multQuat(q1, q2):
     return Q(newx, newy, newz, neww)
 
 
+# Function to calculate the error quaternion between two input quaternions
 def getQuatDiff(q1, q2):
     q2conj = Q(-q2.x, -q2.y, -q2.z, q2.w)
     return multQuat(q1, q2conj)
 
 
+# Turns a numpy array into a Quaternion object
 def toQuat(array):
     return Q(array.item(0), array.item(1), array.item(2), array.item(3))
 
 
-# Calculating desired scan pattern from t=1s to t=7200s
+# Calculating desired scan pattern from t=0s to t=7200s
 def q1():
+
+    # Setting initial conditions
     phi = phi0
     thet = thet0
     psi = psi0
@@ -173,7 +179,8 @@ def q1():
     xlist = []
     ylist = []
 
-    for t in range(1, 7200):
+    # Calculating the scan pattern over the time-span by changing Euler angles by Euler rates
+    for t in range(0, 7200):
         phi += phidot
         thet += thetdot
         psi += psidot
@@ -187,15 +194,19 @@ def q1():
         xlist.append(e1 / (1 + e3))
         ylist.append(e2 / (1 + e3))
 
+    # Plotting the scan pattern
     plt.figure(1)
     plt.plot(xlist, ylist, linewidth=1.0)
     plt.title('Desired Scan Pattern X/Y')
     plt.xlabel('x')
     plt.ylabel('y')
-    # plt.show()
+    plt.savefig(path + "ScanPattern")
 
 
+# Calculate body-fixed angular velocity trajectory from t=0s to t=600s
 def q2():
+
+    # Setting IC
     phi = phi0
     thet = thet0
     psi = psi0
@@ -206,6 +217,7 @@ def q2():
     w2 = []
     w3 = []
 
+    # Calculate angular velocity of satellite through time-span
     for t in range(0, 6000):
         phi += phidot * 0.1
         thet += thetdot * 0.1
@@ -225,8 +237,8 @@ def q2():
         w3.append(omegas.item(2))
 
     odew.append(w[0])
-    print(w[0])
 
+    # Plotting angular velocity of satellite
     plt.figure(2)
     plt.plot(xlist, w1, label='$\omega_1$(t)')
     plt.plot(xlist, w2, label='$\omega_2$(t)')
@@ -235,25 +247,20 @@ def q2():
     plt.xlabel('Time t [s]')
     plt.ylabel('Angular Velocity $\omega$(t) [rad/s]')
     plt.legend()
-    # plt.show()
+    plt.savefig(path + "WMAPAngVel")
 
 
+# Calculate the quaternion trajectory using attitude matrix (see Appendix for derivation)
 def q3():
+
+    # Generate attitude matrix and get initial quaternion
     eulerMat0 = eulerAttMat(phi0, thet0, psi0)
-    # print(eulerMat0)
     q4 = 0.5 * math.sqrt(1 + eulerMat0.item(0, 0) + eulerMat0.item(1, 1) + eulerMat0.item(2, 2))
     q1 = 1 / (4 * q4) * (eulerMat0.item(1, 2) - eulerMat0.item(2, 1))
     q2 = 1 / (4 * q4) * (eulerMat0.item(2, 0) - eulerMat0.item(0, 2))
     q3 = 1 / (4 * q4) * (eulerMat0.item(0, 1) - eulerMat0.item(1, 0))
 
-    xlist = []
-    q1Lst = []
-    q2Lst = []
-    q3Lst = []
-    q4Lst = []
-
-    # print(Q(q1, q2, q3, q4))
-    print('q1 = ' + str(q1) + '\n' + 'q2 = ' + str(q2) + '\n' + 'q3 = ' + str(q3) + '\n' + 'q4 = ' + str(q4) + '\n')
+    print(Q(q1, q2, q3, q4))
 
     oldq = np.matrix([[q1],
                       [q2],
@@ -262,6 +269,10 @@ def q3():
 
     odeq.append(oldq)
 
+    xlist = []
+    q1Lst, q2Lst, q3Lst, q4Lst = [], [], [], []
+
+    # Calculate quaternion trajectory using previous angular velocity trajectory
     for i in range(0, len(w)):
         newQ = quatProp(oldq, 0.1, w[i])
         q.append(newQ)
@@ -282,9 +293,11 @@ def q3():
     plt.xlabel('Time t [s]')
     plt.ylabel('Quaternion')
     plt.title('Quaternion Trajectory vs. Time')
-    # plt.show()
+    plt.savefig(path + "QuatTrajectory")
 
 
+# Using 4th Order Runge Kutta routine, numerically integrate quaternion trajectory, set showControl to False
+# to see trajectory without control law L(t)
 def q4(k):
     showControl = True
     global compFig
@@ -300,6 +313,7 @@ def q4(k):
         odeq[0] = np.matrix([[0], [0], [0], [1]])
         odew[0] = np.matrix([[0], [0], [0]])
 
+    # Numerically integrate quat. trajectory
     for i in range(0, 6000):
         res = rk4(odeq[i], odew[i], q[i], w[i], k, 0.1)
 
@@ -328,7 +342,7 @@ def q4(k):
     plt.xlabel('Time t [s]')
     plt.ylabel('Quaternion')
     plt.title('Runge Kutta Quaternion k = '+str(k)+' Trajectory vs. Time')
-    # plt.show()
+    plt.savefig(path + "RK4QuatTrajectoryk="+str(k))
 
     if showControl:
         for i in range(0, 6000):
@@ -356,7 +370,7 @@ def q4(k):
         plt.xlabel('Time t [s]')
         plt.ylabel(r'Quaternion Error $\delta\alpha$ [deg]')
         plt.title('Quaternion Error k = '+str(k)+' vs. Time')
-        # plt.show()
+        plt.savefig(path + "QuatErrork="+str(k))
 
         # Plotting angular velocity error
         compFig += 1
@@ -368,7 +382,7 @@ def q4(k):
         plt.xlabel('Time t [s]')
         plt.ylabel(r'Angular Velocity Error w(t)-$\tilde{w}$(t) [rad]')
         plt.title('Angular Velocity k = '+str(k)+' Error vs. Time')
-        # plt.show()
+        plt.savefig(path + "AngularVelErrork="+str(k))
 
         # Plotting L matrix
         compFig += 1
@@ -380,9 +394,10 @@ def q4(k):
         plt.xlabel('Time t [s]')
         plt.ylabel(r'Control Law L(t) [rad]')
         plt.title('Control Law k = '+str(k)+' vs. Time')
-        # plt.show()
+        plt.savefig(path + "ControlLawk="+str(k))
 
 
+# Determining how control law and error changes with different control gain kq and kw values
 def ec():
     krange = [1, 5, 10, 15, 20]
     for k in krange:
@@ -395,5 +410,5 @@ q1()
 q2()
 q3()
 q4(10)
-ec()
+# ec() # Enable to see comparison, will take much longer and generate LOTS of plots
 plt.show()
