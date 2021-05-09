@@ -26,12 +26,19 @@ J = np.matrix([[399, -2.71, -1.21],  # [kg-m^2]
 # Storing angular velocity trajectories and quaternion trajectories
 w = []
 q = []
-odeq = []
-odew = []
+# odeq = []
+# odew = []
+q0 = np.matrix([[0], [0], [0], [0]])
+w0 = np.matrix([[0], [0], [0]])
 l1Lst, l2Lst, l3Lst = [], [], []
 
-compFig = 3
+compFig = 5
+l1Mat, l2Mat, l3Mat = {}, {}, {}
+w1Mat, w2Mat, w3Mat = {}, {}, {}
+q1Mat, q2Mat, q3Mat = {}, {}, {}
 
+# Set showControl to False to see quaternion trajectory without control law L(t)
+showControl = True
 
 # Class for holding quaternion information
 class Q:
@@ -143,6 +150,8 @@ def getF(q1, w1):
 def getG(q1, w1, L):
     part1 = np.matmul(np.matmul(np.matmul(-np.linalg.inv(J), crossMat(w1)), J), w1)
     part2 = np.matmul(np.linalg.inv(J), L)
+    # print(part1)
+    # print(part2)
 
     return part1 + part2
 
@@ -206,6 +215,8 @@ def q1():
 # Calculate body-fixed angular velocity trajectory from t=0s to t=600s
 def q2():
 
+    global w0
+
     # Setting IC
     phi = phi0
     thet = thet0
@@ -236,7 +247,7 @@ def q2():
         w2.append(omegas.item(1))
         w3.append(omegas.item(2))
 
-    odew.append(w[0])
+    w0 = w[0]
 
     # Plotting angular velocity of satellite
     plt.figure(2)
@@ -253,6 +264,8 @@ def q2():
 # Calculate the quaternion trajectory using attitude matrix (see Appendix for derivation)
 def q3():
 
+    global q0
+
     # Generate attitude matrix and get initial quaternion
     eulerMat0 = eulerAttMat(phi0, thet0, psi0)
     q4 = 0.5 * math.sqrt(1 + eulerMat0.item(0, 0) + eulerMat0.item(1, 1) + eulerMat0.item(2, 2))
@@ -267,7 +280,7 @@ def q3():
                       [q3],
                       [q4]])
 
-    odeq.append(oldq)
+    q0 = oldq
 
     xlist = []
     q1Lst, q2Lst, q3Lst, q4Lst = [], [], [], []
@@ -296,11 +309,16 @@ def q3():
     plt.savefig(path + "QuatTrajectory")
 
 
-# Using 4th Order Runge Kutta routine, numerically integrate quaternion trajectory, set showControl to False
-# to see trajectory without control law L(t)
-def q4(k):
-    showControl = True
+# Using 4th Order Runge Kutta routine, numerically integrate quaternion trajectory,
+def q4(k, ec):
+    global showControl
     global compFig
+
+    odew = []
+    odeq = []
+
+    odeq.append(q0)
+    odew.append(w0)
 
     q1Lst, q2Lst, q3Lst, q4Lst = [], [], [], []
     w1Lst, w2Lst, w3Lst = [], [], []
@@ -332,17 +350,17 @@ def q4(k):
         xlist.append(i / 10)
 
     # Plotting the RK4 quaternion trajectory
-    compFig += 1
-    plt.figure(compFig)
-    plt.plot(xlist, q1Lst, label='$q_1$')
-    plt.plot(xlist, q2Lst, label='$q_2$')
-    plt.plot(xlist, q3Lst, label='$q_3$')
-    plt.plot(xlist, q4Lst, label='$q_4$')
-    plt.legend()
-    plt.xlabel('Time t [s]')
-    plt.ylabel('Quaternion')
-    plt.title('Runge Kutta Quaternion k = '+str(k)+' Trajectory vs. Time')
-    plt.savefig(path + "RK4QuatTrajectoryk="+str(k))
+    if not ec:
+        plt.figure(4)
+        plt.plot(xlist, q1Lst, label='$q_1$')
+        plt.plot(xlist, q2Lst, label='$q_2$')
+        plt.plot(xlist, q3Lst, label='$q_3$')
+        plt.plot(xlist, q4Lst, label='$q_4$')
+        plt.legend()
+        plt.xlabel('Time t [s]')
+        plt.ylabel('Quaternion')
+        plt.title('Runge Kutta Quaternion k = '+str(k)+' Trajectory vs. Time')
+        plt.savefig(path + "RK4QuatTrajectoryk="+str(k))
 
     if showControl:
         for i in range(0, 6000):
@@ -360,55 +378,73 @@ def q4(k):
             w2diff.append(w2.item(1) - w1.item(1))
             w3diff.append(w2.item(2) - w1.item(2))
 
-        # Plotting quaternion error
-        compFig += 1
-        plt.figure(compFig)
-        plt.plot(xlist, q1diff, label='$q_1$')
-        plt.plot(xlist, q2diff, label='$q_2$')
-        plt.plot(xlist, q3diff, label='$q_3$')
-        plt.legend()
-        plt.xlabel('Time t [s]')
-        plt.ylabel(r'Quaternion Error $\delta\alpha$ [deg]')
-        plt.title('Quaternion Error k = '+str(k)+' vs. Time')
-        plt.savefig(path + "QuatErrork="+str(k))
+        q1Mat[k] = q1diff
+        q2Mat[k] = q2diff
+        q3Mat[k] = q3diff
 
-        # Plotting angular velocity error
-        compFig += 1
-        plt.figure(compFig)
-        plt.plot(xlist, w1diff, label='$w_1$')
-        plt.plot(xlist, w2diff, label='$w_2$')
-        plt.plot(xlist, w3diff, label='$w_3$')
-        plt.legend()
-        plt.xlabel('Time t [s]')
-        plt.ylabel(r'Angular Velocity Error w(t)-$\tilde{w}$(t) [rad]')
-        plt.title('Angular Velocity k = '+str(k)+' Error vs. Time')
-        plt.savefig(path + "AngularVelErrork="+str(k))
+        w1Mat[k] = w1diff
+        w2Mat[k] = w2diff
+        w3Mat[k] = w3diff
 
-        # Plotting L matrix
-        compFig += 1
-        plt.figure(compFig)
-        plt.plot(xlist, l1Lst, label='$L_1$')
-        plt.plot(xlist, l2Lst, label='$L_2$')
-        plt.plot(xlist, l3Lst, label='$L_3$')
-        plt.legend()
-        plt.xlabel('Time t [s]')
-        plt.ylabel(r'Control Law L(t) [rad]')
-        plt.title('Control Law k = '+str(k)+' vs. Time')
-        plt.savefig(path + "ControlLawk="+str(k))
+        l1Mat[k] = l1Lst
+        l2Mat[k] = l2Lst
+        l3Mat[k] = l3Lst
 
 
 # Determining how control law and error changes with different control gain kq and kw values
 def ec():
-    krange = [1, 5, 10, 15, 20]
+
+    global compFig
+
+    krange = [0, 5, 10, 20]
+    xlist = []
+    figLst = []
+
+    for x in range(0, 6000):
+        xlist.append(x*0.1)
+
+    figLst.append(plt.subplots(3, sharex=True))
+    figLst.append(plt.subplots(3, sharex=True))
+    figLst.append(plt.subplots(3, sharex=True))
+
     for k in krange:
         global l1Lst, l2Lst, l3Lst
         l1Lst, l2Lst, l3Lst = [], [], []
-        q4(k)
+        q4(k, True)
+
+        # Plotting comparison graphs for different k values
+        ((figLst[0])[1])[0].plot(xlist, q1Mat[k], '-', label='k = ' + str(k))
+        ((figLst[0])[1])[1].plot(xlist, q2Mat[k], '-', label='k = ' + str(k))
+        ((figLst[0])[1])[2].plot(xlist, q3Mat[k], '-', label='k = ' + str(k))
+        (figLst[0])[0].suptitle('Quaternion Error vs. Time')
+        ((figLst[0])[1])[0].legend(loc=1)
+        (figLst[0])[0].text(0.5, 0.04, 'Time t [s]', ha='center')
+        (figLst[0])[0].text(0.04, 0.5, 'Quaternion Error', va='center', rotation='vertical')
+
+        ((figLst[1])[1])[0].plot(xlist, w1Mat[k], '-', label='k = ' + str(k))
+        ((figLst[1])[1])[1].plot(xlist, w2Mat[k], '-', label='k = ' + str(k))
+        ((figLst[1])[1])[2].plot(xlist, w3Mat[k], '-', label='k = ' + str(k))
+        (figLst[1])[0].suptitle('Angular Velocity Error vs. Time')
+        ((figLst[1])[1])[0].legend(loc=1)
+        (figLst[1])[0].text(0.5, 0.04, 'Time t [s]', ha='center')
+        (figLst[1])[0].text(0.04, 0.5, 'Angular Velocity Error', va='center', rotation='vertical')
+
+        ((figLst[2])[1])[0].plot(xlist, l1Mat[k], '-', label='k = ' + str(k))
+        ((figLst[2])[1])[1].plot(xlist, l2Mat[k], '-', label='k = ' + str(k))
+        ((figLst[2])[1])[2].plot(xlist, l3Mat[k], '-', label='k = ' + str(k))
+        (figLst[2])[0].suptitle('Control Law vs. Time')
+        ((figLst[2])[1])[0].legend(loc=1)
+        (figLst[2])[0].text(0.5, 0.04, 'Time t [s]', ha='center')
+        (figLst[2])[0].text(0.04, 0.5, 'Control Law', va='center', rotation='vertical')
+
+    (figLst[0])[0].savefig(path + "QuatErrorComp")
+    (figLst[1])[0].savefig(path + "AngVelErrorComp")
+    (figLst[2])[0].savefig(path + "ControlLawComp")
 
 
 q1()
 q2()
 q3()
-q4(10)
-# ec() # Enable to see comparison, will take much longer and generate LOTS of plots
+q4(10, False)
+ec()  # Enable to see comparison, will take longer and generate more plots
 plt.show()
