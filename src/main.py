@@ -273,6 +273,7 @@ def q3():
     q2 = 1 / (4 * q4) * (eulerMat0.item(2, 0) - eulerMat0.item(0, 2))
     q3 = 1 / (4 * q4) * (eulerMat0.item(0, 1) - eulerMat0.item(1, 0))
 
+    print("Initial quaternion is: ")
     print(Q(q1, q2, q3, q4))
 
     oldq = np.matrix([[q1],
@@ -419,7 +420,7 @@ def ec():
         (figLst[0])[0].suptitle('Quaternion Error vs. Time')
         ((figLst[0])[1])[0].legend(loc=1)
         (figLst[0])[0].text(0.5, 0.04, 'Time t [s]', ha='center')
-        (figLst[0])[0].text(0.04, 0.5, 'Quaternion Error', va='center', rotation='vertical')
+        (figLst[0])[0].text(0.04, 0.5, 'Quaternion Error [deg]', va='center', rotation='vertical')
 
         ((figLst[1])[1])[0].plot(xlist, w1Mat[k], '-', label='k = ' + str(k))
         ((figLst[1])[1])[1].plot(xlist, w2Mat[k], '-', label='k = ' + str(k))
@@ -427,7 +428,7 @@ def ec():
         (figLst[1])[0].suptitle('Angular Velocity Error vs. Time')
         ((figLst[1])[1])[0].legend(loc=1)
         (figLst[1])[0].text(0.5, 0.04, 'Time t [s]', ha='center')
-        (figLst[1])[0].text(0.04, 0.5, 'Angular Velocity Error', va='center', rotation='vertical')
+        (figLst[1])[0].text(0.04, 0.5, 'Angular Velocity Error [rad/s]', va='center', rotation='vertical')
 
         ((figLst[2])[1])[0].plot(xlist, l1Mat[k], '-', label='k = ' + str(k))
         ((figLst[2])[1])[1].plot(xlist, l2Mat[k], '-', label='k = ' + str(k))
@@ -435,7 +436,7 @@ def ec():
         (figLst[2])[0].suptitle('Control Law vs. Time')
         ((figLst[2])[1])[0].legend(loc=1)
         (figLst[2])[0].text(0.5, 0.04, 'Time t [s]', ha='center')
-        (figLst[2])[0].text(0.04, 0.5, 'Control Law', va='center', rotation='vertical')
+        (figLst[2])[0].text(0.04, 0.5, 'Control Law [rad/s]', va='center', rotation='vertical')
 
     (figLst[0])[0].savefig(path + "QuatErrorComp")
     (figLst[1])[0].savefig(path + "AngVelErrorComp")
@@ -445,6 +446,6 @@ def ec():
 q1()
 q2()
 q3()
-q4(10, False)
+# q4(10, False)
 ec()  # Enable to see comparison, will take longer and generate more plots
 plt.show()
