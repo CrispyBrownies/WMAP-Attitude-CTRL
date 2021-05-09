@@ -40,6 +40,7 @@ q1Mat, q2Mat, q3Mat = {}, {}, {}
 # Set showControl to False to see quaternion trajectory without control law L(t)
 showControl = True
 
+
 # Class for holding quaternion information
 class Q:
     def __init__(self, x, y, z, w):
@@ -209,7 +210,7 @@ def q1():
     plt.title('Desired Scan Pattern X/Y')
     plt.xlabel('x')
     plt.ylabel('y')
-    plt.savefig(path + "ScanPattern")
+    # plt.savefig(path + "ScanPattern")
 
 
 # Calculate body-fixed angular velocity trajectory from t=0s to t=600s
@@ -258,7 +259,7 @@ def q2():
     plt.xlabel('Time t [s]')
     plt.ylabel('Angular Velocity $\omega$(t) [rad/s]')
     plt.legend()
-    plt.savefig(path + "WMAPAngVel")
+    # plt.savefig(path + "WMAPAngVel")
 
 
 # Calculate the quaternion trajectory using attitude matrix (see Appendix for derivation)
@@ -288,7 +289,7 @@ def q3():
 
     # Calculate quaternion trajectory using previous angular velocity trajectory
     for i in range(0, len(w)):
-        newQ = quatProp(oldq, 0.1, w[i])
+        newQ = quatProp(oldq, 1, w[i])
         q.append(newQ)
         q1Lst.append(newQ.item(0))
         q2Lst.append(newQ.item(1))
@@ -307,7 +308,7 @@ def q3():
     plt.xlabel('Time t [s]')
     plt.ylabel('Quaternion')
     plt.title('Quaternion Trajectory vs. Time')
-    plt.savefig(path + "QuatTrajectory")
+    # plt.savefig(path + "QuatTrajectory")
 
 
 # Using 4th Order Runge Kutta routine, numerically integrate quaternion trajectory,
@@ -334,7 +335,7 @@ def q4(k, ec):
 
     # Numerically integrate quat. trajectory
     for i in range(0, 6000):
-        res = rk4(odeq[i], odew[i], q[i], w[i], k, 0.1)
+        res = rk4(odeq[i], odew[i], q[i], w[i], k, 1)
 
         odeq.append(res[0])
         odew.append(res[1])
@@ -361,7 +362,8 @@ def q4(k, ec):
         plt.xlabel('Time t [s]')
         plt.ylabel('Quaternion')
         plt.title('Runge Kutta Quaternion k = '+str(k)+' Trajectory vs. Time')
-        plt.savefig(path + "RK4QuatTrajectoryk="+str(k))
+        plt.xlim([0, 60])
+        # plt.savefig(path + "RK4QuatTrajectoryk="+str(k))
 
     if showControl:
         for i in range(0, 6000):
@@ -421,6 +423,9 @@ def ec():
         ((figLst[0])[1])[0].legend(loc=1)
         (figLst[0])[0].text(0.5, 0.04, 'Time t [s]', ha='center')
         (figLst[0])[0].text(0.04, 0.5, 'Quaternion Error [deg]', va='center', rotation='vertical')
+        # ((figLst[0])[1])[0].axis(xmin=0, xmax=60)
+        # ((figLst[0])[1])[1].axis(xmin=0, xmax=60)
+        # ((figLst[0])[1])[2].axis(xmin=0, xmax=60)
 
         ((figLst[1])[1])[0].plot(xlist, w1Mat[k], '-', label='k = ' + str(k))
         ((figLst[1])[1])[1].plot(xlist, w2Mat[k], '-', label='k = ' + str(k))
@@ -429,6 +434,9 @@ def ec():
         ((figLst[1])[1])[0].legend(loc=1)
         (figLst[1])[0].text(0.5, 0.04, 'Time t [s]', ha='center')
         (figLst[1])[0].text(0.04, 0.5, 'Angular Velocity Error [rad/s]', va='center', rotation='vertical')
+        ((figLst[1])[1])[0].axis(xmin=0, xmax=60)
+        ((figLst[1])[1])[1].axis(xmin=0, xmax=60)
+        ((figLst[1])[1])[2].axis(xmin=0, xmax=60)
 
         ((figLst[2])[1])[0].plot(xlist, l1Mat[k], '-', label='k = ' + str(k))
         ((figLst[2])[1])[1].plot(xlist, l2Mat[k], '-', label='k = ' + str(k))
@@ -437,10 +445,13 @@ def ec():
         ((figLst[2])[1])[0].legend(loc=1)
         (figLst[2])[0].text(0.5, 0.04, 'Time t [s]', ha='center')
         (figLst[2])[0].text(0.04, 0.5, 'Control Law [rad/s]', va='center', rotation='vertical')
+        # ((figLst[2])[1])[0].axis(xmin=0, xmax=60)
+        # ((figLst[2])[1])[1].axis(xmin=0, xmax=60)
+        # ((figLst[2])[1])[2].axis(xmin=0, xmax=60)
 
-    (figLst[0])[0].savefig(path + "QuatErrorComp")
-    (figLst[1])[0].savefig(path + "AngVelErrorComp")
-    (figLst[2])[0].savefig(path + "ControlLawComp")
+    # (figLst[0])[0].savefig(path + "QuatErrorComp")
+    # (figLst[1])[0].savefig(path + "AngVelErrorComp")
+    # (figLst[2])[0].savefig(path + "ControlLawComp")
 
 
 q1()
