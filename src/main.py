@@ -38,7 +38,7 @@ w1Mat, w2Mat, w3Mat = {}, {}, {}
 q1Mat, q2Mat, q3Mat = {}, {}, {}
 
 # Set showControl to False to see quaternion trajectory without control law L(t)
-showControl = True
+showControl = False
 
 
 # Class for holding quaternion information
@@ -362,7 +362,7 @@ def q4(k, ec):
         plt.xlabel('Time t [s]')
         plt.ylabel('Quaternion')
         plt.title('Runge Kutta Quaternion k = '+str(k)+' Trajectory vs. Time')
-        plt.xlim([0, 60])
+        # plt.xlim([0, 60])
         # plt.savefig(path + "RK4QuatTrajectoryk="+str(k))
 
     if showControl:
@@ -457,6 +457,6 @@ def ec():
 q1()
 q2()
 q3()
-# q4(10, False)
-ec()  # Enable to see comparison, will take longer and generate more plots
+q4(0, False)
+# ec()  # Enable to see comparison, will take longer and generate more plots
 plt.show()
